@@ -4,8 +4,8 @@ using UnityEngine;
 public class PlayerStatsSO : ScriptableObject
 {
     [Header("HP")]
-    [Range(1, 100)]
-    public float HP;
+    [Range(1, 5)]
+    public int HP;
 
     [Space(10)]
     [Header("Stamina")]
