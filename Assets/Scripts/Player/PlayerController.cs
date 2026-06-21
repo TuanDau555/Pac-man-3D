@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
@@ -16,6 +17,21 @@ public class PlayerController : MonoBehaviour
     private CharacterController _playerController;
     private InputManager _inputManager;
 
+    // Historical Posision
+    [SerializeField]
+    [Range(0.001f, 1f)]
+    // The time between update player's latest position  
+    private float historicalPositionInterval = 0.1f;
+
+    private float lastPositionTime;
+    private int maxQueueSize;
+
+    // Store all position in a Queue
+    private Queue<Vector3> historicalVelocities;
+
+    private Vector3 averageVelocity;
+
+
     private float _clampAngle;
     private float _mouseSen;
 
@@ -30,6 +46,11 @@ public class PlayerController : MonoBehaviour
 
     public Vector2 MoveInput { get; private set; }
     public bool CanSprint { get; set; } = true;
+
+    /// <summary>
+    /// Predict the next player Pos
+    /// </summary>
+    public Vector3 GetAverageVelocity => AverageVelocity();
 
     #endregion
 
@@ -65,6 +86,8 @@ public class PlayerController : MonoBehaviour
         HandleLookInput();
 
         ProcessMove();
+
+        UpdateHistoricalPosition();
 
     }
 
@@ -149,6 +172,49 @@ public class PlayerController : MonoBehaviour
 
     private bool IsGround()
         => Physics.CheckSphere(groundCheckSphere.position, playerStatsSO.groundRadius, playerStatsSO.groundMask);
+
+    #endregion
+
+    #region Historical Pos
+
+    private void UpdateHistoricalPosition()
+    {
+        // Only add player's velocities every certain amount of time to avoid updating too frequent  
+        if (lastPositionTime + historicalPositionInterval <= Time.time)
+        {
+            // if queue is ful of player's velocities...
+            if (historicalVelocities.Count == maxQueueSize)
+            {
+                //... Delete old one
+                historicalVelocities.Dequeue();
+            }
+
+            //... And add new one
+            historicalVelocities.Enqueue(_playerController.velocity);
+
+            lastPositionTime = Time.time;
+        }
+    }
+
+    /// <summary>
+    /// Calculates the average horizontal (XZ) velocity from the recorded historicalVelocities.
+    /// Ignores the vertical (Y) component and returns Vector3.zero if there are no samples.
+    /// </summary>
+    /// <returns>Average horizontal velocity as a Vector3 (Y = 0).</returns>
+    private Vector3 AverageVelocity()
+    {
+        // Prevent null and division by 0
+        if (historicalVelocities == null || historicalVelocities.Count == 0)
+            return Vector3.zero;
+
+        averageVelocity = Vector3.zero;
+        foreach (Vector3 velocity in historicalVelocities)
+        {
+            averageVelocity += velocity;
+        }
+        averageVelocity.y = 0;
+        return averageVelocity / historicalVelocities.Count;
+    }
 
     #endregion
 }
