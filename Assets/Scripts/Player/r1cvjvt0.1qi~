@@ -1,0 +1,54 @@
+﻿using UnityEngine;
+
+public class PlayerPickupSystem : MonoBehaviour
+{
+    [Header("=== Hand Setup ===")]
+    public Transform rightHandTransform;     // Vị trí cầm súng trên Player
+    public Transform weaponParent;           // Thường là rightHandTransform
+
+    [Header("=== Current Weapon ===")]
+    public GameObject currentWeapon;
+    public WeaponPickup currentWeaponPickup;
+
+    public bool TryPickupWeapon(WeaponPickup pickup)
+    {
+        if (currentWeapon != null)
+        {
+            // Drop súng cũ nếu cần (hoặc swap)
+            DropCurrentWeapon();
+        }
+
+        // Attach súng mới
+        pickup.transform.SetParent(weaponParent);
+        pickup.transform.localPosition = Vector3.zero;
+        pickup.transform.localRotation = Quaternion.identity;
+
+        currentWeapon = pickup.gameObject;
+        currentWeaponPickup = pickup;
+
+        // Bật script bắn súng nếu có
+        //var shooter = currentWeapon.GetComponent<WeaponShooter>();
+        //if (shooter) shooter.enabled = true;
+
+        Debug.Log($"Đã nhặt súng: {pickup.weaponName}");
+        return true;
+    }
+
+    public void DropCurrentWeapon()
+    {
+        if (currentWeapon == null) return;
+
+        currentWeapon.transform.SetParent(null);
+
+        if (currentWeaponPickup != null)
+        {
+            Vector3 dropPos = transform.position + transform.forward * 0.5f + Vector3.up * 0.5f;
+            Vector3 dropForce = transform.forward * 5f + Vector3.up * 3f;
+
+            currentWeaponPickup.Drop(dropPos, dropForce);
+        }
+
+        currentWeapon = null;
+        currentWeaponPickup = null;
+    }
+}
