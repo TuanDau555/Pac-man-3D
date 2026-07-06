@@ -19,8 +19,8 @@ MonoBehaviour:
   timeBeforeStaminaRegenStarts: 3
   staminaIncrement: 2
   staminaTimeIncrement: 0.1
-  walkSpeed: 5
-  sprintSpeed: 15
+  walkSpeed: 3
+  sprintSpeed: 10
   baseSensitive: 10
   lookLimit: 70
   groundRadius: 0.4
