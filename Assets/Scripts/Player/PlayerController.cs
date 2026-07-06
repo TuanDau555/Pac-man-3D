@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
@@ -8,13 +9,36 @@ public class PlayerController : MonoBehaviour
 
     [Header("Required Component")]
     [SerializeField] private PlayerStatsSO playerStatsSO;
-    [SerializeField] private Transform playerCam;
+    // [SerializeField] private Transform playerCam;
+    [SerializeField] private CameraMotionController cameraMotionController;
 
     [Header("Ground Check")]
     [SerializeField] private Transform groundCheckSphere;
 
     private CharacterController _playerController;
     private InputManager _inputManager;
+
+    // Historical Posision
+    [Space(10)]
+    [Header("Player Last Position")]
+    [SerializeField]
+    [Range(1f, 5f)]
+    // The time that player's latest position last
+    private float historicalPositionDuration = 1f;
+
+    [SerializeField]
+    [Range(0.001f, 1f)]
+    // The time between update player's latest position  
+    private float historicalPositionInterval = 0.1f;
+
+    private float lastPositionTime;
+    private int maxQueueSize;
+
+    // Store all position in a Queue
+    private Queue<Vector3> historicalVelocities;
+
+    private Vector3 averageVelocity;
+
 
     private float _clampAngle;
     private float _mouseSen;
@@ -24,12 +48,18 @@ public class PlayerController : MonoBehaviour
     private float _currentSpeed;
 
     private Vector3 _playerVelocity;
+    private Vector3 _previousFrameVelocity;
     private Vector3 _moveDirection;
     private Vector3 _mouseDirection;
     private Vector2 _mouseDelta;
 
     public Vector2 MoveInput { get; private set; }
     public bool CanSprint { get; set; } = true;
+
+    /// <summary>
+    /// Predict the next player Pos
+    /// </summary>
+    public Vector3 GetAverageVelocity => AverageVelocity();
 
     #endregion
 
@@ -42,6 +72,9 @@ public class PlayerController : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        maxQueueSize = Mathf.CeilToInt(1f / historicalPositionInterval * historicalPositionDuration);
+        historicalVelocities = new Queue<Vector3>(maxQueueSize);
     }
 
     private void Start()
@@ -53,7 +86,7 @@ public class PlayerController : MonoBehaviour
         }
 
         _inputManager = InputManager.Instance;
-        playerCam = Camera.main.transform;
+        // playerCam = Camera.main.transform;
 
         InitStat(playerStatsSO);
 
@@ -62,9 +95,15 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         HandleMovementInput();
-        HandleLookInput();
+        // HandleLookInput();
 
         ProcessMove();
+
+        UpdateHistoricalPosition();
+
+        SendDataToCamera();
+
+        _previousFrameVelocity = _playerController.velocity;
 
     }
 
@@ -126,8 +165,17 @@ public class PlayerController : MonoBehaviour
             _currentSpeed = _walkSpeed;
         }
 
+        Vector3 forward = transform.forward;
+        Vector3 right = transform.right;
+        forward.y = 0f;
+        right.y = 0f;
+        forward.Normalize();
+        right.Normalize();
+
+        Vector3 worldMove = forward * _moveDirection.z + right * _moveDirection.x;
+        
         // Apply movement
-        Vector3 finalMovement = (_moveDirection * _currentSpeed) + (_playerVelocity.y * Vector3.up);
+        Vector3 finalMovement = (worldMove * _currentSpeed) + (_playerVelocity.y * Vector3.up);
         _playerController.Move(finalMovement * Time.deltaTime);
     }
 
@@ -144,11 +192,75 @@ public class PlayerController : MonoBehaviour
         transform.localRotation = Quaternion.Euler(-_mouseDirection.y, _mouseDirection.x, 0f);
 
         // Follow the camera look
-        _moveDirection = playerCam.TransformDirection(_moveDirection);
+        // _moveDirection = playerCam.TransformDirection(_moveDirection);
     }
 
     private bool IsGround()
         => Physics.CheckSphere(groundCheckSphere.position, playerStatsSO.groundRadius, playerStatsSO.groundMask);
+
+    #endregion
+
+    #region Camera Data
+
+    private void SendDataToCamera()
+    {
+        if (cameraMotionController == null) return;
+
+        CameraMotionData data = new CameraMotionData
+        {
+            Velocity = _playerController.velocity,
+            PreviousVelocity = _previousFrameVelocity,
+            MoveInput = MoveInput,
+            MouseDelta = _inputManager.GetMouseDelta(),
+            IsGrounded = IsGround(),
+            IsSprinting = _inputManager.IsSprintedPressed() && CanSprint,
+        };
+
+        cameraMotionController.ReceiveData(data);
+    }
+
+    #endregion
+
+    #region Historical Pos
+
+    private void UpdateHistoricalPosition()
+    {
+        // Only add player's velocities every certain amount of time to avoid updating too frequent  
+        if (lastPositionTime + historicalPositionInterval <= Time.time)
+        {
+            // if queue is ful of player's velocities...
+            if (historicalVelocities.Count == maxQueueSize)
+            {
+                //... Delete old one
+                historicalVelocities.Dequeue();
+            }
+
+            //... And add new one
+            historicalVelocities.Enqueue(_playerController.velocity);
+
+            lastPositionTime = Time.time;
+        }
+    }
+
+    /// <summary>
+    /// Calculates the average horizontal (XZ) velocity from the recorded historicalVelocities.
+    /// Ignores the vertical (Y) component and returns Vector3.zero if there are no samples.
+    /// </summary>
+    /// <returns>Average horizontal velocity as a Vector3 (Y = 0).</returns>
+    private Vector3 AverageVelocity()
+    {
+        // Prevent null and division by 0
+        if (historicalVelocities == null || historicalVelocities.Count == 0)
+            return Vector3.zero;
+
+        averageVelocity = Vector3.zero;
+        foreach (Vector3 velocity in historicalVelocities)
+        {
+            averageVelocity += velocity;
+        }
+        averageVelocity.y = 0;
+        return averageVelocity / historicalVelocities.Count;
+    }
 
     #endregion
 }

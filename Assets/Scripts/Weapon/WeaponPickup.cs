@@ -1,0 +1,23 @@
+﻿using UnityEditor.iOS.Xcode;
+using UnityEngine;
+
+public class WeaponPickup : MonoBehaviour
+{
+    public GameObject weaponPrefab;
+    public GameObject pickupEffect;
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            PlayerShooting player = other.GetComponent<PlayerShooting>();
+            if (player != null && !player.hasWeapon)
+            {
+                player.EquipWeapon(weaponPrefab, this.gameObject);
+                if (pickupEffect != null)
+                {
+                    Instantiate(pickupEffect, transform.position, Quaternion.identity);
+                }
+            }
+        }
+    }
+}

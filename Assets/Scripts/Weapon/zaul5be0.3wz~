@@ -1,0 +1,147 @@
+﻿//using UnityEngine;
+
+//public class WeaponShooter : MonoBehaviour
+//{
+//    [Header("=== Weapon Settings ===")]
+//    public WeaponData weaponData;           // ScriptableObject từ trước
+
+//    [Header("=== Shooting Config ===")]
+//    public Transform muzzlePoint;           // Điểm nòng súng (tạo Empty child)
+//    public float damage = 25f;
+//    public float fireRate = 0.2f;           // Thời gian giữa 2 viên đạn
+//    public int maxAmmo = 15;
+//    public int currentAmmo;
+//    public int maxReserveAmmo = 90;
+
+//    [Header("=== Effects ===")]
+//    public GameObject muzzleFlashPrefab;
+//    public AudioClip shootSound;
+//    public AudioSource audioSource;
+
+//    [Header("=== Recoil ===")]
+//    public float recoilForce = 5f;
+//    public float recoilUp = 8f;
+
+//    private float nextFireTime = 0f;
+//    private PlayerPickupSystem playerPickup;
+//    private Camera playerCamera;
+
+//    private void Awake()
+//    {
+//        currentAmmo = maxAmmo;
+
+//        if (audioSource == null)
+//            audioSource = GetComponent<AudioSource>();
+
+//        playerPickup = FindObjectOfType<PlayerPickupSystem>();
+//        playerCamera = Camera.main;
+//    }
+
+//    private void Update()
+//    {
+//        // Chỉ bắn khi súng đang được cầm
+//        if (playerPickup.currentWeapon != this.gameObject) return;
+
+//        if (Input.GetButton("Fire1") && Time.time >= nextFireTime)
+//        {
+//            if (currentAmmo > 0)
+//            {
+//                Shoot();
+//            }
+//            else
+//            {
+//                // Có thể thêm âm thanh click hết đạn sau
+//            }
+//        }
+//    }
+
+//    private void Shoot()
+//    {
+//        nextFireTime = Time.time + fireRate;
+//        currentAmmo--;
+
+//        if (playerCamera != null)
+//        {
+//            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+
+//            if (Physics.Raycast(ray, out RaycastHit hit, 100f))
+//            {
+//                // === TÌM Damageable ===
+//                Damageable damageable = hit.transform.GetComponent<Damageable>();
+//                if (damageable != null)
+//                {
+//                    damageable.TakeDamage(damage);
+//                }
+//                else
+//                {
+//                    // Tìm ở Parent (trường hợp enemy có nhiều bone)
+//                    damageable = hit.transform.GetComponentInParent<Damageable>();
+//                    if (damageable != null)
+//                        damageable.TakeDamage(damage);
+//                }
+
+//                // Tạo Bullet Hole (tùy chọn)
+//                if (hit.collider.CompareTag("Environment") || hit.collider.CompareTag("Untagged"))
+//                {
+//                    // Có thể instantiate bullet hole prefab ở đây
+//                    Debug.Log($"Đạn trúng {hit.collider.gameObject.name} tại {hit.point}");
+//                }
+//            }
+//        }
+
+//        PlayMuzzleFlash();
+//        PlayShootSound();
+//        ApplyRecoil();
+//    }
+
+//    private void PlayMuzzleFlash()
+//    {
+//        if (muzzleFlashPrefab && muzzlePoint)
+//        {
+//            GameObject flash = Instantiate(muzzleFlashPrefab, muzzlePoint.position, muzzlePoint.rotation);
+//            Destroy(flash, 0.1f);
+//        }
+//    }
+
+//    private void PlayShootSound()
+//    {
+//        if (shootSound && audioSource)
+//        {
+//            audioSource.PlayOneShot(shootSound);
+//        }
+//    }
+
+//    private void ApplyRecoil()
+//    {
+//        // Recoil camera (có thể cải tiến sau)
+//        if (playerCamera != null)
+//        {
+//            playerCamera.transform.Rotate(-recoilUp * Time.deltaTime * 30f, 0, 0);
+//        }
+
+//        // Recoil súng (nếu có animation)
+//        transform.localPosition -= Vector3.forward * recoilForce * Time.deltaTime;
+//    }
+
+//    // Hàm nạp đạn (sẽ dùng sau)
+//    public void Reload()
+//    {
+//        if (maxReserveAmmo > 0)
+//        {
+//            int ammoNeeded = maxAmmo - currentAmmo;
+//            int ammoToLoad = Mathf.Min(ammoNeeded, maxReserveAmmo);
+
+//            currentAmmo += ammoToLoad;
+//            maxReserveAmmo -= ammoToLoad;
+//        }
+//    }
+
+//    // Debug trong Inspector
+//    private void OnGUI()
+//    {
+//        if (playerPickup.currentWeapon == this.gameObject)
+//        {
+//            GUILayout.Label($"Ammo: {currentAmmo} / {maxAmmo}");
+//        }
+//    }
+//}
