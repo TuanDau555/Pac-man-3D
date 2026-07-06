@@ -9,7 +9,7 @@ public class ConnectedWayPoint : MonoBehaviour
     [Tooltip("Radius to connect waypoints together")]
     private float connectedRadius;
     // TODO: we could add priority, instead of choosing random Enemy could choose based on weight point
-    [SerializeField] private List<ConnectedWayPoint> _connection;
+    [SerializeField, ReadOnly] private List<ConnectedWayPoint> _connection;
     [SerializeField] private bool isDrawGizmos;
 
     private const string TAG = "Waypoint";

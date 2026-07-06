@@ -1,3 +1,4 @@
+using UnityEditor;
 using UnityEngine;
 
 public class EnemyFOV : MonoBehaviour
@@ -20,6 +21,7 @@ public class EnemyFOV : MonoBehaviour
     public bool CanSeePlayer { get; private set; }
     public bool InAttackRange { get; private set; }
     public Vector3 DirectionToTarget { get; private set; }
+    public Transform CurrentTarget { get; private set; }
 
     // Timers
     private CountdownTimer _fovTickTimer;
@@ -119,6 +121,7 @@ public class EnemyFOV : MonoBehaviour
         if (_rangeChecks.Length > 0)
         {
             Transform target = _rangeChecks[0].transform;
+            CurrentTarget = target;
             DirectionToTarget = (target.position - transform.position).normalized;
             float distanceToTarget = Vector3.Distance(transform.position, target.position);
 
@@ -153,6 +156,10 @@ public class EnemyFOV : MonoBehaviour
                 }
             }
         }
+        else
+        {
+            CurrentTarget = null;
+        }
 
         if (sawTarget)
         {
@@ -166,5 +173,32 @@ public class EnemyFOV : MonoBehaviour
         }
     }
 
+    #endregion
+
+    #region Editor
+    private void OnDrawGizmos()
+    {
+        Handles.color = Color.yellow;
+        Handles.DrawWireArc(transform.position, Vector3.up, Vector3.forward, 360, _viewRadius);
+        Handles.DrawWireArc(transform.position, Vector3.up, Vector3.forward, 360, _attackRange);
+
+        Vector3 viewAngleA = DirFromAngle(transform.eulerAngles.y, -_viewAngle / 2);
+        Vector3 viewAngleB = DirFromAngle(transform.eulerAngles.y, _viewAngle / 2);
+
+        Handles.DrawLine(transform.position, transform.position + viewAngleA * _viewRadius);
+        Handles.DrawLine(transform.position, transform.position + viewAngleB * _viewRadius);
+
+        if (CanSeePlayer)
+        {
+            Handles.color = Color.green;
+            Handles.DrawLine(transform.position, _playerRef.transform.position);
+        }
+    }
+
+    private Vector3 DirFromAngle(float eulerY, float angleInDegrees)
+    {
+        angleInDegrees += eulerY;
+        return new Vector3(Mathf.Sin(angleInDegrees * Mathf.Deg2Rad), 0, Mathf.Cos(angleInDegrees * Mathf.Deg2Rad));
+    }
     #endregion
 }

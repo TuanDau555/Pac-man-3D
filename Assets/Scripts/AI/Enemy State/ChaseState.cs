@@ -7,17 +7,15 @@ public class ChaseState : EnemyBaseState
     #region Parameter
     private NavMeshAgent _navMeshAgent;
     private EnemyStatsSO _statsSO;
-    private PlayerController _player;
     private EnemyFOV _fov;
     private float _viewRadius;
     private float _viewAngle;
     #endregion
 
     #region Constructor 
-    public ChaseState(Enemy enemy, Animator animator, NavMeshAgent agent, PlayerController player, EnemyFOV fov, EnemyStatsSO statsSO) : base(enemy, animator)
+    public ChaseState(Enemy enemy, NavMeshAgent agent, EnemyFOV fov, EnemyStatsSO statsSO) : base(enemy)
     {
         this._navMeshAgent = agent;
-        this._player = player;
         this._fov = fov;
         this._statsSO = statsSO;
     }
@@ -31,12 +29,12 @@ public class ChaseState : EnemyBaseState
         Debug.Log($"{enemy.name} is chasing");
         InitializeAgent();
 
-        _navMeshAgent.SetDestination(_player.transform.position);
+        _navMeshAgent.SetDestination(_fov.CurrentTarget.position);
     }
 
     public override void Update()
     {
-        // ChasePlayer();
+        ChasePlayer();
     }
 
 
@@ -49,7 +47,7 @@ public class ChaseState : EnemyBaseState
     #region Agent
     private void InitializeAgent()
     {
-        if (_navMeshAgent == null || _player == null) return;
+        if (_navMeshAgent == null || _fov == null) return;
 
         _navMeshAgent.isStopped = false;
         _navMeshAgent.speed = _statsSO.chaseSpeed;
@@ -61,8 +59,11 @@ public class ChaseState : EnemyBaseState
     #region States
     private void ChasePlayer()
     {
+        Vector3 playerPos = _fov.CurrentTarget.position;
+        Vector3 playerAvgVelocity = _fov.CurrentTarget.GetComponent<PlayerController>().GetAverageVelocity;
+        
         // Estimate player's move and time, which enemy needs to go to player position  
-        float timeToPlayer = Vector3.Distance(_player.transform.position, _navMeshAgent.transform.position)
+        float timeToPlayer = Vector3.Distance(playerPos, _navMeshAgent.transform.position)
         / _statsSO.chaseSpeed;
 
         // To avoid Prediction player move to far
@@ -76,10 +77,10 @@ public class ChaseState : EnemyBaseState
         // This current position plus with Distance that player may go in that time
         /// Summary:
         ///     If the player runs in direction X with an average speed of 5m/s and it takes me 1s to catch up to the same place → then the player has gone another 5m, I should run there.
-        Vector3 targetPosition = _player.transform.position + _player.GetAverageVelocity * timeToPlayer;
+        Vector3 targetPosition = playerPos + playerAvgVelocity * timeToPlayer;
 
 
-        Vector3 directionToPlayer = (_player.transform.position - _navMeshAgent.transform.position).normalized;
+        Vector3 directionToPlayer = (playerPos - _navMeshAgent.transform.position).normalized;
         Vector3 directionToTarget = (targetPosition - _navMeshAgent.transform.position).normalized;
 
         float dot = Vector3.Dot(directionToPlayer, directionToTarget); // cosin angle between 2 vector
@@ -89,7 +90,7 @@ public class ChaseState : EnemyBaseState
         if (dot < _statsSO.movePredictionThreshold)
         {
             // ...No need to predict go to player position 
-            targetPosition = _player.transform.position;
+            targetPosition = playerPos;
         }
 
         _navMeshAgent.SetDestination(targetPosition);

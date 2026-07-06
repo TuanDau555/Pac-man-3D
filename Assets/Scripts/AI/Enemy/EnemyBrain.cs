@@ -6,8 +6,13 @@ public class EnemyBrain : MonoBehaviour
 {
     #region Parameter
 
+    [Tooltip("Area that Enemy Patrol")]
+    [SerializeField] private Transform _patrolRegion;
+    [SerializeField] private EnemyStatsSO _enemyStatsSO;
+
     private StateMachine _stateMachine;
     private Enemy _enemy;
+    private EnemyFOV _fov;
     private EnemyCombat _enemyCombat;
     private NavMeshAgent _agent;
 
@@ -51,12 +56,13 @@ public class EnemyBrain : MonoBehaviour
 
     private void Init()
     {
+        _stateMachine = new StateMachine();
         _agent = GetComponent<NavMeshAgent>();
         _enemy = GetComponent<Enemy>();
+        _fov = GetComponent<EnemyFOV>();
         // _animator = GetComponent<Animator>();
         _enemyCombat = GetComponent<EnemyCombat>();
 
-        _stateMachine = new StateMachine();
         EnemyState(_agent, _enemy, _enemyCombat);
 
     }
@@ -77,7 +83,16 @@ public class EnemyBrain : MonoBehaviour
 
     private void EnemyState(NavMeshAgent agent, Enemy enemy, EnemyCombat enemyCombat)
     {
-        
+        var patrolState = new PatrolState(enemy, agent, _patrolRegion, _enemyStatsSO);
+        var chaseState = new ChaseState(enemy, agent, _fov, _enemyStatsSO);
+        var attackState = new AttackState(agent, enemy, enemyCombat, _fov);
+
+        At(patrolState, chaseState, new FuncPredicate(() => _fov.CanSeePlayer && !_fov.InAttackRange));
+        At(chaseState, attackState, new FuncPredicate(() => _fov.InAttackRange));
+        At(attackState, chaseState, new FuncPredicate(() => !_fov.InAttackRange && _fov.CanSeePlayer));
+        At(chaseState, patrolState, new FuncPredicate(() => !_fov.CanSeePlayer));
+
+        _stateMachine.SetState(patrolState);
     }
 
     #endregion

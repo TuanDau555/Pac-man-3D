@@ -14,7 +14,7 @@ public abstract class EnemyBaseState : IState
 
     protected readonly float crossFadeDuration = 0.1f;
 
-    public EnemyBaseState(Enemy enemy, Animator animator)
+    public EnemyBaseState(Enemy enemy)
     {
         this.enemy = enemy;
         // this.animator = animator;

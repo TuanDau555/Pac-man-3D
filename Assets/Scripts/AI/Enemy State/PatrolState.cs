@@ -17,7 +17,7 @@ public class PatrolState : EnemyBaseState
     private float _waitTimer;
     private int _waypointVisited;
     private readonly Vector3 startPoint;
-    public PatrolState(Enemy enemy, Animator animator, NavMeshAgent agent, EnemyStatsSO statsSO, Transform patrolRegion) : base(enemy, animator)
+    public PatrolState(Enemy enemy, NavMeshAgent agent, Transform patrolRegion, EnemyStatsSO statsSO) : base(enemy)
     {
         this.startPoint = enemy.transform.position;
         this._navMeshAgent = agent;
