@@ -1,0 +1,108 @@
+﻿using UnityEngine;
+
+public class Equip : MonoBehaviour
+{
+    [Header("References")]
+    public Transform WeaponHolder;
+    public GameObject currentGun;
+    public Rigidbody currentGunRb;
+    public Camera playerCamera;
+
+    [Header("Settings")]
+    public float pickupRange = 3f;
+    public float throwForce = 8f;
+    public float throwUpwardForce = 2f;
+
+    private Rigidbody gunRb;
+    private bool isEquipped = true;
+    private Vector3 originalLocalPos;
+    private Quaternion originalLocalRot;
+
+    void Start()
+    {
+        if (currentGun != null)
+        {
+            gunRb = currentGun.GetComponent<Rigidbody>();
+
+            // Lưu vị trí & rotation ban đầu khi cầm (chỉ chạy 1 lần)
+            if (currentGun.transform.parent == WeaponHolder)
+            {
+                originalLocalPos = currentGun.transform.localPosition;
+                originalLocalRot = currentGun.transform.localRotation;
+            }
+
+            if (gunRb != null)
+                currentGunRb.isKinematic = true;
+        }
+    }
+    void Update()
+    {
+        // Nh?t v? kh� (E)
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            TryPickupWeapon();
+        }
+
+        // N�m v? kh� (Q)
+        if (Input.GetKeyDown(KeyCode.Q) && isEquipped)
+        {
+            UnequipAndThrow();
+        }
+    }
+
+    // ====================== PICKUP ======================
+    void TryPickupWeapon()
+    {
+        RaycastHit hit;
+        if (Physics.Raycast(playerCamera.transform.position,
+                            playerCamera.transform.forward,
+                            out hit, pickupRange))
+        {
+            // Ki?m tra xem c� ph?i Gun kh�ng
+            if (hit.transform.CompareTag("Weapon"))
+            {
+                currentGun = hit.transform.gameObject;
+                currentGunRb = currentGun.GetComponent<Rigidbody>();
+                EquipObject();
+            }
+        }
+    }
+
+    // ====================== EQUIP ======================
+    public void EquipObject()
+    {
+        if (currentGun == null || WeaponHolder == null) return;
+
+        currentGun.transform.SetParent(WeaponHolder);
+
+        // Dùng rotation đã lưu thay vì Quaternion.identity
+        currentGun.transform.localPosition = originalLocalPos;
+        currentGun.transform.localRotation = originalLocalRot;
+        if(currentGunRb != null)
+            currentGunRb.isKinematic = true;
+        isEquipped = true;
+
+        Debug.Log("Weapon Equipped - Local Rotation: " + originalLocalRot.eulerAngles);
+    }
+
+    // ====================== DROP & THROW ======================
+    void UnequipAndThrow()
+    {
+        if (currentGun == null || currentGunRb == null) return;
+
+        // Ng?t parent
+        currentGun.transform.SetParent(null);
+
+        currentGunRb.isKinematic = false;
+        currentGunRb.linearVelocity = Vector3.zero; // Reset v?n t?c c?
+
+        // T�nh h�?ng n�m
+        Vector3 throwDirection = playerCamera.transform.forward;
+        throwDirection = throwDirection.normalized * throwForce + Vector3.up * throwUpwardForce;
+
+        currentGunRb.AddForce(throwDirection, ForceMode.Impulse);
+
+        isEquipped = false;
+        Debug.Log("Weapon Thrown");
+    }
+}
